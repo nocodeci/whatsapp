@@ -1,0 +1,28 @@
+{
+  "name": "whatsapp-bridge-node",
+  "version": "1.0.0",
+  "description": "WhatsApp Bridge using Baileys (Node.js alternative to Go bridge)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "baileys",
+    "bridge",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.8",
+    "express": "^4.18.2",
+    "qrcode-terminal": "^0.12.0",
+    "pino": "^8.17.2",
+    "sqlite3": "^5.1.6"
+  }
+}
+
+

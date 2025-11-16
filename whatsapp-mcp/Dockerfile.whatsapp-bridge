@@ -6,14 +6,19 @@ RUN apk add --no-cache git gcc musl-dev sqlite-dev
 # Set working directory
 WORKDIR /app
 
-# Copy go mod files
-COPY whatsapp-bridge/go.mod whatsapp-bridge/go.sum ./
+# Copy go mod files (go.sum will be generated if missing)
+COPY whatsapp-bridge/go.mod* ./
 
-# Download dependencies
+# Update whatsmeow to latest version to fix outdated client issue
+RUN go get -u go.mau.fi/whatsmeow@latest
 RUN go mod download
+RUN go mod tidy
 
 # Copy source code
 COPY whatsapp-bridge/ ./
+
+# Ensure go.sum is up to date with all imports
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o whatsapp-bridge .
