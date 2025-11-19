@@ -29,6 +29,10 @@ services:
       - whatsapp_store:/app/store
     environment:
       - TZ=UTC
+      # Configure n8n webhook URL to receive WhatsApp messages
+      # Example: http://n8n:5678/webhook/mcp-whatsapp
+      # Leave empty to disable webhook notifications
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-}
     restart: unless-stopped
     networks:
       - internal
@@ -40,6 +44,7 @@ services:
     container_name: whatsapp-mcp-server
     ports:
       - "9000:9000"  # Expose MCP STDIO-TCP bridge for n8n
+      - "8000:8000"  # Expose dashboard UI
     volumes:
       - whatsapp_store:/app/store
       - ./whatsapp-mcp/media:/app/media:rw
@@ -47,10 +52,11 @@ services:
       - TZ=UTC
       - PYTHONUNBUFFERED=1
       - PYTHONIOENCODING=utf-8
+      - DASHBOARD_PORT=8000
     depends_on:
       - whatsapp-bridge
     restart: unless-stopped
-    command: python /app/stdio_tcp_bridge.py
+    command: sh -c "python dashboard_server.py & python stdio_tcp_bridge.py"
     networks:
       - internal
 

@@ -1,0 +1,173 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "mcpServerUrl",
+              "value": "http://whatsapp-mcp-server:8000/run_tool",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9bc2dfb3-34a7-4d18-9aaa-f078731c1625",
+      "name": "Workflow Configuration - MCP",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1712,
+        1464
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message || $json.body.text || $json.body }}",
+        "options": {
+          "systemMessage": "=You are a WhatsApp assistant with access to WhatsApp MCP server tools. Use the available tools to help users with WhatsApp-related tasks.\n\nGuidelines:\n- Use the MCP tools to interact with WhatsApp functionality\n- Be helpful and explain what actions you are taking\n- Keep responses concise and clear for WhatsApp\n- If a tool fails, explain the issue to the user\n\nUser information:\n- Phone: {{ $json.from || $json.body.from }}\n- Message received at: {{ $json.timestamp || $json.body.timestamp }}"
+        }
+      },
+      "id": "a00c88e4-8ce9-41cf-ad0b-2213ac5e1d86",
+      "name": "AI Agent - MCP WhatsApp",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1432,
+        1360
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "8514a1c8-578b-4b7f-a8c0-437ae3c6586e",
+      "name": "OpenAI Chat Model - MCP",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1488,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "cb96f6e5-ecd5-4c65-b0c2-64023c642d1c",
+      "name": "Simple Memory - MCP",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -1360,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "connection": {
+          "endpoint": "http://whatsapp-mcp-server:8000/run_tool",
+          "serverTransport": "http-streamable",
+          "authentication": "none"
+        },
+        "options": {}
+      },
+      "id": "3d6af9f2-ca8a-4126-b5ae-4d330d96ff3a",
+      "name": "MCP WhatsApp Server",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -1232,
+        1584
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mcp-whatsapp",
+        "options": {}
+      },
+      "id": "6a4be928-1ca0-417d-83ac-094e95e2f9da",
+      "name": "Webhook Trigger - MCP",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1936,
+        1464
+      ],
+      "webhookId": "bb95cf94-9dae-4d4f-9137-2d16044a20fd"
+    }
+  ],
+  "connections": {
+    "Workflow Configuration - MCP": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - MCP WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model - MCP": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - MCP WhatsApp",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory - MCP": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - MCP WhatsApp",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP WhatsApp Server": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - MCP WhatsApp",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger - MCP": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration - MCP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "812433fd56f1ee9447e896bf14890080d0e905c453c48ca8ec686b5aaa3b358b"
+  }
+}
+

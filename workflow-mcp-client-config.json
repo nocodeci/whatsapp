@@ -1,0 +1,30 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "connection": {
+          "endpoint": "http://whatsapp-mcp-server:8000/run_tool",
+          "serverTransport": "http-streamable",
+          "authentication": "none"
+        },
+        "tool": "send_message",
+        "arguments": {
+          "recipient": "={{ $json.recipientPhoneNumber || $json.recipient || '+33612345678' }}",
+          "message": "={{ $json.text || $json.textBody || $json.message }}"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [4016, 464],
+      "id": "6d155083-8514-461e-a431-892a9c6099c7",
+      "name": "WhatsApp MCP - Send Message"
+    }
+  ],
+  "connections": {
+    "WhatsApp MCP - Send Message": {
+      "main": []
+    }
+  }
+}
+

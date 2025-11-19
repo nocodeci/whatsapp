@@ -1,0 +1,62 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Docker volumes data
+whatsapp_store/
+n8n_data/
+
+# WhatsApp session/store files
+whatsapp-mcp/whatsapp-bridge/store/
+whatsapp-mcp/whatsapp-mcp-server/store/
+*.db
+*.sqlite
+*.sqlite3
+
+# Media files
+whatsapp-mcp/media/*
+!whatsapp-mcp/media/.gitkeep
+
+# Node modules
+node_modules/
+whatsapp-mcp/whatsapp-dashboard/node_modules/
+whatsapp-bridge-node/node_modules/
+
+# Build outputs
+whatsapp-mcp/whatsapp-dashboard/dist/
+*.log
+*.log.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+test-*.json
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+

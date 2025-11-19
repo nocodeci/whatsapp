@@ -31,6 +31,62 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// WebhookPayload represents the payload sent to n8n webhook
+type WebhookPayload struct {
+	From      string    `json:"from"`
+	To        string    `json:"to"`
+	Message   string    `json:"message"`
+	Text      string    `json:"text"`
+	Body      string    `json:"body"`
+	Timestamp time.Time `json:"timestamp"`
+	ChatJID   string    `json:"chat_jid"`
+	ChatName  string    `json:"chat_name"`
+	IsFromMe  bool      `json:"is_from_me"`
+	MediaType string    `json:"media_type,omitempty"`
+	Filename  string    `json:"filename,omitempty"`
+	MessageID string    `json:"message_id"`
+}
+
+// sendWebhook sends a webhook notification to n8n when a message is received
+func sendWebhook(webhookURL string, payload WebhookPayload) {
+	if webhookURL == "" {
+		return // Webhook not configured, skip
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("Error marshaling webhook payload: %v\n", err)
+		return
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Error creating webhook request: %v\n", err)
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send request with timeout
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error sending webhook: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		fmt.Printf("Webhook sent successfully to %s\n", webhookURL)
+	} else {
+		fmt.Printf("Webhook returned status %d\n", resp.StatusCode)
+	}
+}
+
 // Message represents a chat message for our client
 type Message struct {
 	Time      time.Time
@@ -197,13 +253,20 @@ type SendMessageResponse struct {
 
 // SendMessageRequest represents the request body for the send message API
 type SendMessageRequest struct {
-	Recipient string `json:"recipient"`
-	Message   string `json:"message"`
-	MediaPath string `json:"media_path,omitempty"`
+	Recipient string   `json:"recipient"`
+	Message   string   `json:"message"`
+	MediaPath string   `json:"media_path,omitempty"`
+	Buttons   []Button `json:"buttons,omitempty"`
+}
+
+// Button represents a button in an interactive message
+type Button struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
 }
 
 // Function to send a WhatsApp message
-func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message string, mediaPath string) (bool, string) {
+func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message string, mediaPath string, buttons []Button) (bool, string) {
 	if !client.IsConnected() {
 		return false, "Not connected to WhatsApp"
 	}
@@ -357,6 +420,19 @@ func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message str
 				FileLength:    &resp.FileLength,
 			}
 		}
+	} else if len(buttons) > 0 {
+		// WhatsApp Web (via whatsmeow) doesn't support interactive buttons like WhatsApp Business API
+		// So we'll format the message with numbered options that the user can reply to
+		var buttonText strings.Builder
+		buttonText.WriteString(message)
+		buttonText.WriteString("\n\n")
+		buttonText.WriteString("Répondez avec le numéro de votre choix :\n")
+		
+		for i, button := range buttons {
+			buttonText.WriteString(fmt.Sprintf("%d. %s\n", i+1, button.Title))
+		}
+		
+		msg.Conversation = proto.String(buttonText.String())
 	} else {
 		msg.Conversation = proto.String(message)
 	}
@@ -409,7 +485,7 @@ func extractMediaInfo(msg *waProto.Message) (mediaType string, filename string, 
 }
 
 // Handle regular incoming messages with media support
-func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *events.Message, logger waLog.Logger) {
+func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *events.Message, logger waLog.Logger, webhookURL string) {
 	// Save message to database
 	chatJID := msg.Info.Chat.String()
 	sender := msg.Info.Sender.User
@@ -466,6 +542,32 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 			fmt.Printf("[%s] %s %s: [%s: %s] %s\n", timestamp, direction, sender, mediaType, filename, content)
 		} else if content != "" {
 			fmt.Printf("[%s] %s %s: %s\n", timestamp, direction, sender, content)
+		}
+
+		// Send webhook to n8n if configured (only for incoming messages, not sent by us)
+		if !msg.Info.IsFromMe && webhookURL != "" {
+			// Get sender JID (phone number with @s.whatsapp.net)
+			senderJID := msg.Info.Sender.String()
+			// Get our own JID
+			ourJID := client.Store.ID.String()
+
+			webhookPayload := WebhookPayload{
+				From:      senderJID,
+				To:        ourJID,
+				Message:   content,
+				Text:      content,
+				Body:      content,
+				Timestamp: msg.Info.Timestamp,
+				ChatJID:   chatJID,
+				ChatName:  name,
+				IsFromMe:  msg.Info.IsFromMe,
+				MediaType: mediaType,
+				Filename:  filename,
+				MessageID: msg.Info.ID,
+			}
+
+			// Send webhook asynchronously to avoid blocking message processing
+			go sendWebhook(webhookURL, webhookPayload)
 		}
 	}
 }
@@ -706,7 +808,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		fmt.Println("Received request to send message", req.Message, req.MediaPath)
 
 		// Send the message
-		success, message := sendWhatsAppMessage(client, req.Recipient, req.Message, req.MediaPath)
+		success, message := sendWhatsAppMessage(client, req.Recipient, req.Message, req.MediaPath, req.Buttons)
 		fmt.Println("Message sent", success, message)
 		// Set response headers
 		w.Header().Set("Content-Type", "application/json")
@@ -853,12 +955,20 @@ func main() {
 	}
 	defer messageStore.Close()
 
+	// Get webhook URL from environment variable
+	webhookURL := os.Getenv("N8N_WEBHOOK_URL")
+	if webhookURL != "" {
+		logger.Infof("Webhook configured: %s", webhookURL)
+	} else {
+		logger.Infof("No webhook configured (set N8N_WEBHOOK_URL to enable)")
+	}
+
 	// Setup event handling for messages and history sync
 	client.AddEventHandler(func(evt interface{}) {
 		switch v := evt.(type) {
 		case *events.Message:
 			// Process regular messages
-			handleMessage(client, messageStore, v, logger)
+			handleMessage(client, messageStore, v, logger, webhookURL)
 
 		case *events.HistorySync:
 			// Process history sync events

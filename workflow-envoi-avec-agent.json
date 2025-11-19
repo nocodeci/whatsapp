@@ -1,0 +1,141 @@
+{
+  "name": "Envoyer Message WhatsApp avec Agent IA",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prepare-recipient",
+              "name": "recipient",
+              "value": "={{ $('Extraire Données Message').item.json.sender_jid }}",
+              "type": "string"
+            },
+            {
+              "id": "prepare-message",
+              "name": "message",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-send",
+      "name": "Préparer Envoi",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Envoyer un message WhatsApp au destinataire {{ $json.recipient }} avec le message suivant : {{ $json.message }}\n\nUtilise l'outil send_message pour envoyer ce message.",
+        "options": {
+          "systemMessage": "=You are a WhatsApp assistant. Your task is to send WhatsApp messages using the send_message tool.\n\nWhen asked to send a message:\n1. Use the send_message tool\n2. Provide the recipient (JID format: number@s.whatsapp.net)\n3. Provide the message text\n\nAlways use the send_message tool when asked to send a message."
+        }
+      },
+      "id": "ai-agent-send",
+      "name": "Agent IA - Envoyer Message",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "openai-model-send",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [460, 480]
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 5
+      },
+      "id": "memory-send",
+      "name": "Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [460, 660]
+    },
+    {
+      "parameters": {
+        "connection": {
+          "endpoint": "http://whatsapp-mcp-server:8000/run_tool",
+          "serverTransport": "http-streamable",
+          "authentication": "none"
+        },
+        "options": {}
+      },
+      "id": "mcp-tools-send",
+      "name": "MCP WhatsApp Tools",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [460, 840]
+    }
+  ],
+  "connections": {
+    "Préparer Envoi": {
+      "main": [
+        [
+          {
+            "node": "Agent IA - Envoyer Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent IA - Envoyer Message",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent IA - Envoyer Message",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP WhatsApp Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent IA - Envoyer Message",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-15T12:00:00.000Z",
+  "versionId": "1"
+}
+

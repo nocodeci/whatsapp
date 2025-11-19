@@ -18,11 +18,15 @@ RUN pip install --no-cache-dir httpx>=0.28.1 "mcp[cli]>=1.6.0" requests>=2.32.3
 # Copy source code
 COPY whatsapp-mcp-server/ ./
 
+# Copy built dashboard UI
+COPY whatsapp-dashboard/dist /app/ui
+
 # Create a volume mount point for the database
 RUN mkdir -p /app/store
 
 # Expose stdio for MCP communication
 # Note: MCP uses stdio, so no port exposure needed
+# Dashboard server runs on port 8000 (configured in docker-compose)
 
-# Run the MCP server
-CMD ["python", "main.py"] 
+# Run the MCP server (stdio bridge) and dashboard server
+CMD ["sh", "-c", "python dashboard_server.py & python stdio_tcp_bridge.py"] 

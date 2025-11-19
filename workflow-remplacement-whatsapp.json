@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://whatsapp-mcp-server:8000/run_tool",
+        "authentication": "none",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"tool\": \"send_message\",\n  \"params\": {\n    \"recipient\": \"{{ $json.recipientPhoneNumber || $json.recipient }}\",\n    \"message\": \"{{ $json.text || $json.textBody || $json.message }}\"\n  }\n}"
+      },
+      "id": "6d155083-8514-461e-a431-892a9c6099c7",
+      "name": "WhatsApp MCP Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [4016, 464],
+      "webhookId": "df344fdc-aaeb-4ee5-bc95-0676622d03d9"
+    }
+  ],
+  "connections": {
+    "WhatsApp MCP Server": {
+      "main": []
+    }
+  }
+}
+

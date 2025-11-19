@@ -30,20 +30,20 @@ echo ""
 
 # Vérifier si une mise à jour est nécessaire
 if [[ "$CURRENT_VERSION" == *"$LATEST_COMMIT"* ]]; then
-    echo "✅ Vous avez la dernière version disponible !"
-    echo ""
-    echo "💡 Pour vérifier le statut du service :"
-    echo "   docker compose logs whatsapp-bridge --tail 20"
+  echo "✅ Vous avez la dernière version disponible !"
+  echo ""
+  echo "💡 Pour vérifier le statut du service :"
+  echo "   docker compose logs whatsapp-bridge --tail 20"
 else
-    echo "⚠️  Une nouvelle version est disponible !"
-    echo ""
+  echo "⚠️  Une nouvelle version est disponible !"
+  echo ""
     echo "🔨 Pour mettre à jour automatiquement, exécutez :"
     echo "   ./update-all.sh"
     echo ""
     echo "🔨 Ou manuellement :"
-    echo "   docker compose build --no-cache whatsapp-bridge"
-    echo "   docker compose up -d whatsapp-bridge"
-    echo "   docker compose logs -f whatsapp-bridge"
+  echo "   docker compose build --no-cache whatsapp-bridge"
+  echo "   docker compose up -d whatsapp-bridge"
+  echo "   docker compose logs -f whatsapp-bridge"
 fi
 
 echo ""
